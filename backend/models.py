@@ -46,6 +46,9 @@ class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text)
+    start_date = db.Column(db.Date)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'))
+    client = db.relationship('Client')
 
 class ProductProject(db.Model):
     __tablename__ = 'product_projects'
@@ -67,4 +70,31 @@ class Client(db.Model):
     __tablename__ = 'clients'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
+    first_name = db.Column(db.String(64))
+    last_name = db.Column(db.String(64))
+    primary_phone = db.Column(db.String(32))
+    primary_email = db.Column(db.String(128))
+    secondary_phone = db.Column(db.String(32))
+    secondary_email = db.Column(db.String(128))
+    referral_type = db.Column(db.String(64))
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'))
+    employee = db.relationship('Employee')
     contact_info = db.Column(db.String(256))
+
+class Employee(db.Model):
+    __tablename__ = 'employees'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+
+class LeadStage(db.Model):
+    __tablename__ = 'lead_stages'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True, nullable=False)
+
+class Lead(db.Model):
+    __tablename__ = 'leads'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+    contact_info = db.Column(db.String(256))
+    stage_id = db.Column(db.Integer, db.ForeignKey('lead_stages.id'))
+    stage = db.relationship('LeadStage')
