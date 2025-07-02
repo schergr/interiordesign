@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const API = 'http://localhost:3000';
+const API = 'http://localhost:5000';
 
 export default function Vendors() {
   const [vendors, setVendors] = useState([]);
