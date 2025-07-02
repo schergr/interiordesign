@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 
-const API = 'http://localhost:5000';
+
+const API = 'http://localhost:3000';
+
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -28,6 +30,8 @@ export default function Products() {
   const submit = async (e) => {
     e.preventDefault();
     const res = await fetch(`${API}/products`, {
+
+    await fetch(`${API}/products`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sku, name, price, vendor_id: vendorId || null })
