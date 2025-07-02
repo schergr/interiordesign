@@ -32,3 +32,18 @@ pytest
 ## Environment
 
 The application expects a `DATABASE_URL` environment variable which is already configured in `docker-compose.yml`. You can copy `.env.example` to `.env` and adjust it for other environments.
+
+## Deploying to k3s
+
+These manifests are designed for a k3s cluster (which uses Traefik by default).
+Build and push the Docker images for `backend` and `frontend` to a registry
+accessible by your cluster, then apply the manifests:
+
+```bash
+kubectl apply -f k8s/postgres.yaml
+kubectl apply -f k8s/backend.yaml
+kubectl apply -f k8s/frontend.yaml
+kubectl apply -f k8s/ingress.yaml
+```
+
+The frontend will be reachable via the ingress host `ids.212southadvisors.com`.
