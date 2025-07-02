@@ -134,3 +134,72 @@ class Task(db.Model):
     google_task_id = db.Column(db.String(128))
 
     contract = db.relationship('Contract')
+class Room(db.Model):
+    __tablename__ = 'rooms'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    project = db.relationship('Project')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'project': self.project.name if self.project else None
+        }
+
+class Item(db.Model):
+    __tablename__ = 'items'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+    room_id = db.Column(db.Integer, db.ForeignKey('rooms.id'))
+    room = db.relationship('Room')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'room': self.room.name if self.room else None
+        }
+
+class Proposal(db.Model):
+    __tablename__ = 'proposals'
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    description = db.Column(db.Text)
+    project = db.relationship('Project')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'project': self.project.name if self.project else None,
+            'description': self.description
+        }
+
+class Invoice(db.Model):
+    __tablename__ = 'invoices'
+    id = db.Column(db.Integer, primary_key=True)
+    proposal_id = db.Column(db.Integer, db.ForeignKey('proposals.id'))
+    amount = db.Column(db.Numeric(10,2))
+    proposal = db.relationship('Proposal')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'proposal_id': self.proposal_id,
+            'amount': str(self.amount) if self.amount else None
+        }
+
+class Note(db.Model):
+    __tablename__ = 'notes'
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.Text, nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    project = db.relationship('Project')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'text': self.text,
+            'project': self.project.name if self.project else None
+        }
