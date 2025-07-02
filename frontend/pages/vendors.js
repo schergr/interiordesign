@@ -1,15 +1,12 @@
 import { useState, useEffect } from 'react';
 
-
-const API = 'http://localhost:3000';
+const API = 'http://localhost:5000';
 
 export default function Vendors() {
   const [vendors, setVendors] = useState([]);
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
-
   const [message, setMessage] = useState('');
-
 
   const fetchVendors = async () => {
     const res = await fetch(`${API}/vendors`);
@@ -22,7 +19,6 @@ export default function Vendors() {
   const submit = async (e) => {
     e.preventDefault();
     const res = await fetch(`${API}/vendors`, {
-    await fetch(`${API}/vendors`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, contact_info: contact })
