@@ -5,9 +5,9 @@ from flask_httpauth import HTTPBasicAuth
 from flask_cors import CORS
 
 try:
-    from .models import db, Role, User, Vendor, Product, Project, ProductProject, Inventory, Client
+    from .models import db, Role, User, Vendor, Product, Project, ProductProject, Inventory, Client, Employee, LeadStage, Lead
 except ImportError:  # allows running as 'python app.py'
-    from models import db, Role, User, Vendor, Product, Project, ProductProject, Inventory, Client
+    from models import db, Role, User, Vendor, Product, Project, ProductProject, Inventory, Client, Employee, LeadStage, Lead
 import os
 
 app = Flask(__name__)
