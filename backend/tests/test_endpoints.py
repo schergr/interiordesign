@@ -155,3 +155,40 @@ def test_crud_endpoints():
         assert rv.status_code == 204
         after = len(client.get('/employees').get_json())
         assert after == before - 1
+
+
+def test_additional_models():
+    with app.app_context():
+        client = app.test_client()
+
+        # Room creation and retrieval
+        rv = client.post('/rooms', json={'name': 'Living'})
+        assert rv.status_code == 201
+        room_id = rv.get_json()['id']
+        rv = client.get(f'/rooms/{room_id}')
+        assert rv.get_json()['name'] == 'Living'
+
+        # Item creation linked to room
+        rv = client.post('/items', json={'name': 'Couch', 'room_id': room_id})
+        assert rv.status_code == 201
+        item_id = rv.get_json()['id']
+        rv = client.get(f'/items/{item_id}')
+        assert rv.get_json()['name'] == 'Couch'
+
+        # Proposal, Invoice, and Note creation
+        rv = client.post('/projects', json={'name': 'ProjExtra'})
+        proj_id = rv.get_json()['id']
+
+        rv = client.post('/proposals', json={'project_id': proj_id, 'description': 'Desc'})
+        proposal_id = rv.get_json()['id']
+        assert client.get(f'/proposals/{proposal_id}').status_code == 200
+
+        rv = client.post('/invoices', json={'proposal_id': proposal_id, 'amount': '10.00'})
+        invoice_id = rv.get_json()['id']
+        rv = client.get(f'/invoices/{invoice_id}')
+        assert rv.get_json()['id'] == invoice_id
+
+        rv = client.post('/notes', json={'text': 'Note1', 'project_id': proj_id})
+        note_id = rv.get_json()['id']
+        rv = client.get(f'/notes/{note_id}')
+        assert rv.get_json()['text'] == 'Note1'

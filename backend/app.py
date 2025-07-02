@@ -10,12 +10,14 @@ import time
 try:
     from .models import (
         db, Role, User, Vendor, Product, Project, ProductProject, Inventory,
-        Client, Employee, LeadStage, Lead, ContractStatus, Contract, Task
+        Client, Employee, LeadStage, Lead, ContractStatus, Contract, Task,
+        Room, Item, Proposal, Invoice, Note
     )
 except ImportError:  # allows running as 'python app.py'
     from models import (
         db, Role, User, Vendor, Product, Project, ProductProject, Inventory,
-        Client, Employee, LeadStage, Lead, ContractStatus, Contract, Task
+        Client, Employee, LeadStage, Lead, ContractStatus, Contract, Task,
+        Room, Item, Proposal, Invoice, Note
     )
 import os
 
@@ -519,6 +521,181 @@ def handle_employee(employee_id):
         return jsonify({'id': employee.id})
     else:
         db.session.delete(employee)
+        db.session.commit()
+        return '', 204
+
+# -------------------- New Models --------------------
+
+@app.route('/rooms', methods=['POST'])
+def create_room():
+    data = request.get_json() or {}
+    name = data.get('name')
+    if not name:
+        return jsonify({'error': 'Invalid input'}), 400
+    room = Room(name=name, project_id=data.get('project_id'))
+    db.session.add(room)
+    db.session.commit()
+    return jsonify({'id': room.id}), 201
+
+
+@app.route('/rooms', methods=['GET'])
+def list_rooms():
+    rooms = Room.query.all()
+    return jsonify([r.to_dict() for r in rooms])
+
+
+@app.route('/rooms/<int:room_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_room(room_id):
+    room = Room.query.get_or_404(room_id)
+    if request.method == 'GET':
+        return jsonify(room.to_dict())
+    elif request.method == 'PUT':
+        data = request.get_json() or {}
+        for field in ['name', 'project_id']:
+            if field in data:
+                setattr(room, field, data[field])
+        db.session.commit()
+        return jsonify({'id': room.id})
+    else:
+        db.session.delete(room)
+        db.session.commit()
+        return '', 204
+
+
+@app.route('/items', methods=['POST'])
+def create_item():
+    data = request.get_json() or {}
+    name = data.get('name')
+    if not name:
+        return jsonify({'error': 'Invalid input'}), 400
+    item = Item(name=name, room_id=data.get('room_id'))
+    db.session.add(item)
+    db.session.commit()
+    return jsonify({'id': item.id}), 201
+
+
+@app.route('/items', methods=['GET'])
+def list_items():
+    items = Item.query.all()
+    return jsonify([i.to_dict() for i in items])
+
+
+@app.route('/items/<int:item_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_item(item_id):
+    item = Item.query.get_or_404(item_id)
+    if request.method == 'GET':
+        return jsonify(item.to_dict())
+    elif request.method == 'PUT':
+        data = request.get_json() or {}
+        for field in ['name', 'room_id']:
+            if field in data:
+                setattr(item, field, data[field])
+        db.session.commit()
+        return jsonify({'id': item.id})
+    else:
+        db.session.delete(item)
+        db.session.commit()
+        return '', 204
+
+
+@app.route('/proposals', methods=['POST'])
+def create_proposal():
+    data = request.get_json() or {}
+    proposal = Proposal(project_id=data.get('project_id'), description=data.get('description'))
+    db.session.add(proposal)
+    db.session.commit()
+    return jsonify({'id': proposal.id}), 201
+
+
+@app.route('/proposals', methods=['GET'])
+def list_proposals():
+    proposals = Proposal.query.all()
+    return jsonify([p.to_dict() for p in proposals])
+
+
+@app.route('/proposals/<int:proposal_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_proposal(proposal_id):
+    proposal = Proposal.query.get_or_404(proposal_id)
+    if request.method == 'GET':
+        return jsonify(proposal.to_dict())
+    elif request.method == 'PUT':
+        data = request.get_json() or {}
+        for field in ['project_id', 'description']:
+            if field in data:
+                setattr(proposal, field, data[field])
+        db.session.commit()
+        return jsonify({'id': proposal.id})
+    else:
+        db.session.delete(proposal)
+        db.session.commit()
+        return '', 204
+
+
+@app.route('/invoices', methods=['POST'])
+def create_invoice():
+    data = request.get_json() or {}
+    invoice = Invoice(proposal_id=data.get('proposal_id'), amount=data.get('amount'))
+    db.session.add(invoice)
+    db.session.commit()
+    return jsonify({'id': invoice.id}), 201
+
+
+@app.route('/invoices', methods=['GET'])
+def list_invoices():
+    invoices = Invoice.query.all()
+    return jsonify([inv.to_dict() for inv in invoices])
+
+
+@app.route('/invoices/<int:invoice_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_invoice(invoice_id):
+    invoice = Invoice.query.get_or_404(invoice_id)
+    if request.method == 'GET':
+        return jsonify(invoice.to_dict())
+    elif request.method == 'PUT':
+        data = request.get_json() or {}
+        for field in ['proposal_id', 'amount']:
+            if field in data:
+                setattr(invoice, field, data[field])
+        db.session.commit()
+        return jsonify({'id': invoice.id})
+    else:
+        db.session.delete(invoice)
+        db.session.commit()
+        return '', 204
+
+
+@app.route('/notes', methods=['POST'])
+def create_note():
+    data = request.get_json() or {}
+    text = data.get('text')
+    if not text:
+        return jsonify({'error': 'Invalid input'}), 400
+    note = Note(text=text, project_id=data.get('project_id'))
+    db.session.add(note)
+    db.session.commit()
+    return jsonify({'id': note.id}), 201
+
+
+@app.route('/notes', methods=['GET'])
+def list_notes():
+    notes = Note.query.all()
+    return jsonify([n.to_dict() for n in notes])
+
+
+@app.route('/notes/<int:note_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_note(note_id):
+    note = Note.query.get_or_404(note_id)
+    if request.method == 'GET':
+        return jsonify(note.to_dict())
+    elif request.method == 'PUT':
+        data = request.get_json() or {}
+        for field in ['text', 'project_id']:
+            if field in data:
+                setattr(note, field, data[field])
+        db.session.commit()
+        return jsonify({'id': note.id})
+    else:
+        db.session.delete(note)
         db.session.commit()
         return '', 204
 
