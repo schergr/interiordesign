@@ -47,4 +47,3 @@ kubectl apply -f k8s/ingress.yaml
 ```
 
 The frontend will be reachable via the ingress host `ids.212southadvisors.com`.
-=======
