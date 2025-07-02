@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_httpauth import HTTPBasicAuth
 from flask_cors import CORS
+
 try:
     from .models import db, Role, User, Vendor, Product, Project, ProductProject, Inventory, Client
 except ImportError:  # allows running as 'python app.py'
@@ -97,8 +98,23 @@ def create_client():
     data = request.get_json() or {}
     name = data.get('name')
     if not name:
+        fn = data.get('first_name', '')
+        ln = data.get('last_name', '')
+        name = f"{fn} {ln}".strip()
+    if not name:
         return jsonify({'error': 'Invalid input'}), 400
-    client = Client(name=name, contact_info=data.get('contact_info'))
+    client = Client(
+        name=name,
+        first_name=data.get('first_name'),
+        last_name=data.get('last_name'),
+        primary_phone=data.get('primary_phone'),
+        primary_email=data.get('primary_email'),
+        secondary_phone=data.get('secondary_phone'),
+        secondary_email=data.get('secondary_email'),
+        referral_type=data.get('referral_type'),
+        employee_id=data.get('employee_id'),
+        contact_info=data.get('contact_info')
+    )
     db.session.add(client)
     db.session.commit()
     return jsonify({'id': client.id}), 201
@@ -108,11 +124,106 @@ def create_client():
 def list_clients():
     clients = Client.query.all()
     return jsonify([
-        {'id': c.id, 'name': c.name, 'contact_info': c.contact_info}
+        {
+            'id': c.id,
+            'name': c.name,
+            'first_name': c.first_name,
+            'last_name': c.last_name,
+            'primary_phone': c.primary_phone,
+            'primary_email': c.primary_email,
+            'secondary_phone': c.secondary_phone,
+            'secondary_email': c.secondary_email,
+            'referral_type': c.referral_type,
+            'employee': c.employee.name if c.employee else None,
+            'contact_info': c.contact_info
+        }
         for c in clients
     ])
+
+@app.route('/projects', methods=['POST'])
+def create_project():
+    data = request.get_json() or {}
+    name = data.get('name')
+    if not name:
+        return jsonify({'error': 'Invalid input'}), 400
+    project = Project(
+        name=name,
+        description=data.get('description'),
+        start_date=data.get('start_date'),
+        client_id=data.get('client_id')
+    )
+    db.session.add(project)
+    db.session.commit()
+    for pid in data.get('product_ids', []):
+        db.session.add(ProductProject(product_id=pid, project_id=project.id))
+    db.session.commit()
+    return jsonify({'id': project.id}), 201
+
+@app.route('/projects', methods=['GET'])
+def list_projects():
+    projects = Project.query.all()
+    result = []
+    for p in projects:
+        products = ProductProject.query.filter_by(project_id=p.id).all()
+        result.append({
+            'id': p.id,
+            'name': p.name,
+            'description': p.description,
+            'start_date': p.start_date.isoformat() if p.start_date else None,
+            'client': p.client.name if p.client else None,
+            'products': [
+                {
+                    'id': pp.product.id,
+                    'name': pp.product.name,
+                    'quantity': pp.quantity
+                } for pp in products
+            ]
+        })
+    return jsonify(result)
+
+@app.route('/leadstages', methods=['GET'])
+def list_lead_stages():
+    stages = LeadStage.query.all()
+    return jsonify([{'id': s.id, 'name': s.name} for s in stages])
+
+@app.route('/leads', methods=['POST'])
+def create_lead():
+    data = request.get_json() or {}
+    name = data.get('name')
+    stage_id = data.get('stage_id')
+    if not name or not stage_id:
+        return jsonify({'error': 'Invalid input'}), 400
+    lead = Lead(name=name, contact_info=data.get('contact_info'), stage_id=stage_id)
+    db.session.add(lead)
+    db.session.commit()
+    return jsonify({'id': lead.id}), 201
+
+@app.route('/leads', methods=['GET'])
+def list_leads():
+    leads = Lead.query.all()
+    return jsonify([
+        {
+            'id': l.id,
+            'name': l.name,
+            'contact_info': l.contact_info,
+            'stage': l.stage.name if l.stage else None
+        } for l in leads
+    ])
+
+@app.route('/employees', methods=['GET'])
+def list_employees():
+    employees = Employee.query.all()
+    return jsonify([{'id': e.id, 'name': e.name} for e in employees])
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        if LeadStage.query.count() == 0:
+            for name in ['New', 'Follow-Up', 'Sold', 'Lost']:
+                db.session.add(LeadStage(name=name))
+            db.session.commit()
+        if Employee.query.count() == 0:
+            for name in ['Stephanie Scher', 'Sable Murphy', 'Jennifer Stewart', 'Daniel Murphy']:
+                db.session.add(Employee(name=name))
+            db.session.commit()
     app.run(host='0.0.0.0', port=5000)
