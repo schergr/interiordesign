@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
-import { DataGrid } from '@mui/x-data-grid';
+import {
+  DataGrid,
+  GridActionsCellItem,
+  GridRowModes,
+  GridRowModesModel,
+} from '@mui/x-data-grid';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SaveIcon from '@mui/icons-material/Save';
+import { putData, deleteData } from '../lib/api.js';
 
 const API = 'http://localhost:5000';
 
@@ -16,6 +25,7 @@ export default function Clients() {
   const [contact, setContact] = useState('');
   const [employees, setEmployees] = useState([]);
   const [message, setMessage] = useState('');
+  const [rowModesModel, setRowModesModel] = useState({});
 
   const fetchClients = async () => {
     const res = await fetch(`${API}/clients`);
@@ -23,10 +33,38 @@ export default function Clients() {
     setClients(data);
   };
 
+  const processRowUpdate = async (newRow) => {
+    await putData(`${API}/clients/${newRow.id}`, newRow);
+    fetchClients();
+    return newRow;
+  };
+
+  const handleEditClick = (id) => () => {
+    setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.Edit } });
+  };
+
+  const handleSaveClick = (id) => () => {
+    setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.View } });
+  };
+
+  const handleDeleteClick = (id) => async () => {
+    if (!window.confirm('Delete this client?')) return;
+    await deleteData(`${API}/clients/${id}`);
+    fetchClients();
+  };
+
   const fetchEmployees = async () => {
     const res = await fetch(`${API}/employees`);
     const data = await res.json();
     setEmployees(data);
+  };
+
+  const handleRowEditStart = (params, event) => {
+    event.defaultMuiPrevented = true;
+  };
+
+  const handleRowEditStop = (params, event) => {
+    event.defaultMuiPrevented = true;
   };
 
   useEffect(() => { fetchClients(); fetchEmployees(); }, []);
@@ -71,6 +109,36 @@ export default function Clients() {
     { field: 'primary_email', headerName: 'Primary Email', flex: 1 },
     { field: 'referral_type', headerName: 'Referral Type', flex: 1 },
     { field: 'employee', headerName: 'Referred By', flex: 1 },
+    {
+      field: 'actions',
+      type: 'actions',
+      getActions: (params) => {
+        const inEdit = rowModesModel[params.id]?.mode === GridRowModes.Edit;
+        return inEdit
+          ? [
+              <GridActionsCellItem
+                key="save"
+                icon={<SaveIcon />}
+                label="Save"
+                onClick={handleSaveClick(params.id)}
+              />,
+            ]
+          : [
+              <GridActionsCellItem
+                key="edit"
+                icon={<EditIcon />}
+                label="Edit"
+                onClick={handleEditClick(params.id)}
+              />,
+              <GridActionsCellItem
+                key="delete"
+                icon={<DeleteIcon />}
+                label="Delete"
+                onClick={handleDeleteClick(params.id)}
+              />,
+            ];
+      },
+    },
   ];
 
   return (
@@ -98,6 +166,12 @@ export default function Clients() {
           rows={clients}
           columns={columns}
           getRowId={(row) => row.id}
+          editMode="row"
+          processRowUpdate={processRowUpdate}
+          onRowEditStart={handleRowEditStart}
+          onRowEditStop={handleRowEditStop}
+          rowModesModel={rowModesModel}
+          onRowModesModelChange={setRowModesModel}
           disableRowSelectionOnClick
         />
       </div>
