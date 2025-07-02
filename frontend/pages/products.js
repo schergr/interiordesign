@@ -45,10 +45,23 @@ export default function Products() {
     fetchProducts();
   };
 
+  const currencyFormatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  });
+
   const columns = [
     { field: 'sku', headerName: 'SKU', flex: 1 },
     { field: 'name', headerName: 'Name', flex: 1 },
-    { field: 'price', headerName: 'Price', flex: 1 },
+    {
+      field: 'price',
+      headerName: 'Price',
+      flex: 1,
+      valueFormatter: ({ value }) =>
+        value === undefined || value === null || value === ''
+          ? ''
+          : currencyFormatter.format(Number(value))
+    },
     { field: 'vendor', headerName: 'Vendor', flex: 1 },
   ];
 

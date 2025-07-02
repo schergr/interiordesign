@@ -65,11 +65,24 @@ export default function Contracts() {
     setAmount('');
   };
 
+  const currencyFormatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  });
+
   const columns = [
     { field: 'project', headerName: 'Project', flex: 1 },
     { field: 'client', headerName: 'Client', flex: 1 },
     { field: 'status', headerName: 'Status', flex: 1 },
-    { field: 'amount', headerName: 'Amount', flex: 1 },
+    {
+      field: 'amount',
+      headerName: 'Amount',
+      flex: 1,
+      valueFormatter: ({ value }) =>
+        value === undefined || value === null || value === ''
+          ? ''
+          : currencyFormatter.format(Number(value))
+    },
   ];
 
   return (
