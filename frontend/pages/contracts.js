@@ -116,7 +116,8 @@ export default function Contracts() {
       headerName: 'Amount',
       flex: 1,
       valueFormatter: ({ value }) =>
-        value === undefined || value === null || value === ''
+        value === undefined || value === null || value === '' ||
+        !Number.isFinite(Number(value))
           ? ''
           : currencyFormatter.format(Number(value))
     },

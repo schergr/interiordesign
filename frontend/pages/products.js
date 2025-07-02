@@ -95,7 +95,8 @@ export default function Products() {
       headerName: 'Price',
       flex: 1,
       valueFormatter: ({ value }) =>
-        value === undefined || value === null || value === ''
+        value === undefined || value === null || value === '' ||
+        !Number.isFinite(Number(value))
           ? ''
           : currencyFormatter.format(Number(value))
     },
