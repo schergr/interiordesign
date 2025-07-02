@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { DataGrid } from '@mui/x-data-grid';
 
 const API = 'http://localhost:5000';
 
@@ -33,6 +34,11 @@ export default function Vendors() {
     fetchVendors();
   };
 
+  const columns = [
+    { field: 'name', headerName: 'Name', flex: 1 },
+    { field: 'contact_info', headerName: 'Contact Info', flex: 1 },
+  ];
+
   return (
     <main>
       <h1>Vendors</h1>
@@ -42,11 +48,15 @@ export default function Vendors() {
         <input value={contact} onChange={e => setContact(e.target.value)} placeholder="Contact Info" />
         <button type="submit">Add</button>
       </form>
-      <ul>
-        {vendors.map(v => (
-          <li key={v.id}>{v.name} - {v.contact_info}</li>
-        ))}
-      </ul>
+      <div style={{ width: '100%' }}>
+        <DataGrid
+          autoHeight
+          rows={vendors}
+          columns={columns}
+          getRowId={(row) => row.id}
+          disableRowSelectionOnClick
+        />
+      </div>
     </main>
   );
 }

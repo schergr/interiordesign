@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { DataGrid } from '@mui/x-data-grid';
 
 const API = 'http://localhost:5000';
 
@@ -42,6 +43,11 @@ export default function Leads() {
     setStageId('');
   };
 
+  const columns = [
+    { field: 'name', headerName: 'Name', flex: 1 },
+    { field: 'stage', headerName: 'Stage', flex: 1 },
+  ];
+
   return (
     <main>
       <h1>Leads</h1>
@@ -55,11 +61,15 @@ export default function Leads() {
         </select>
         <button type="submit">Add</button>
       </form>
-      <ul>
-        {leads.map(l => (
-          <li key={l.id}>{l.name} - {l.stage}</li>
-        ))}
-      </ul>
+      <div style={{ width: '100%' }}>
+        <DataGrid
+          autoHeight
+          rows={leads}
+          columns={columns}
+          getRowId={(row) => row.id}
+          disableRowSelectionOnClick
+        />
+      </div>
     </main>
   );
 }

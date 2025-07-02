@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { DataGrid } from '@mui/x-data-grid';
 
 const API = 'http://localhost:5000';
 
@@ -44,6 +45,13 @@ export default function Products() {
     fetchProducts();
   };
 
+  const columns = [
+    { field: 'sku', headerName: 'SKU', flex: 1 },
+    { field: 'name', headerName: 'Name', flex: 1 },
+    { field: 'price', headerName: 'Price', flex: 1 },
+    { field: 'vendor', headerName: 'Vendor', flex: 1 },
+  ];
+
   return (
     <main>
       <h1>Products</h1>
@@ -58,11 +66,15 @@ export default function Products() {
         </select>
         <button type="submit">Add</button>
       </form>
-      <ul>
-        {products.map(p => (
-          <li key={p.id}>{p.sku} - {p.name} - ${p.price} - {p.vendor}</li>
-        ))}
-      </ul>
+      <div style={{ width: '100%' }}>
+        <DataGrid
+          autoHeight
+          rows={products}
+          columns={columns}
+          getRowId={(row) => row.id}
+          disableRowSelectionOnClick
+        />
+      </div>
     </main>
   );
 }

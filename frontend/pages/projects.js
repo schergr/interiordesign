@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { DataGrid } from '@mui/x-data-grid';
 
 const API = 'http://localhost:5000';
 
@@ -60,6 +61,12 @@ export default function Projects() {
     setProductIds([]);
   };
 
+  const columns = [
+    { field: 'name', headerName: 'Name', flex: 1 },
+    { field: 'start_date', headerName: 'Start Date', flex: 1 },
+    { field: 'client', headerName: 'Client', flex: 1 },
+  ];
+
   return (
     <main>
       <h1>Projects</h1>
@@ -86,13 +93,15 @@ export default function Projects() {
         </div>
         <button type="submit">Add</button>
       </form>
-      <ul>
-        {projects.map(p => (
-          <li key={p.id}>
-            {p.name} - {p.start_date || 'N/A'} - {p.client || 'No Client'}
-          </li>
-        ))}
-      </ul>
+      <div style={{ width: '100%' }}>
+        <DataGrid
+          autoHeight
+          rows={projects}
+          columns={columns}
+          getRowId={(row) => row.id}
+          disableRowSelectionOnClick
+        />
+      </div>
     </main>
   );
 }

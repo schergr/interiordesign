@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { DataGrid } from '@mui/x-data-grid';
 
 const API = 'http://localhost:5000';
 
@@ -64,6 +65,13 @@ export default function Contracts() {
     setAmount('');
   };
 
+  const columns = [
+    { field: 'project', headerName: 'Project', flex: 1 },
+    { field: 'client', headerName: 'Client', flex: 1 },
+    { field: 'status', headerName: 'Status', flex: 1 },
+    { field: 'amount', headerName: 'Amount', flex: 1 },
+  ];
+
   return (
     <main>
       <h1>Contracts</h1>
@@ -88,11 +96,15 @@ export default function Contracts() {
         <input value={amount} onChange={e => setAmount(e.target.value)} placeholder="Amount" />
         <button type="submit">Add</button>
       </form>
-      <ul>
-        {contracts.map(c => (
-          <li key={c.id}>{c.project || 'No Project'} - {c.client || 'No Client'} - {c.status}</li>
-        ))}
-      </ul>
+      <div style={{ width: '100%' }}>
+        <DataGrid
+          autoHeight
+          rows={contracts}
+          columns={columns}
+          getRowId={(row) => row.id}
+          disableRowSelectionOnClick
+        />
+      </div>
     </main>
   );
 }

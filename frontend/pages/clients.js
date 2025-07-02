@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { DataGrid } from '@mui/x-data-grid';
 
 const API = 'http://localhost:5000';
 
@@ -64,6 +65,14 @@ export default function Clients() {
     setContact('');
   };
 
+  const columns = [
+    { field: 'name', headerName: 'Name', flex: 1 },
+    { field: 'primary_phone', headerName: 'Primary Phone', flex: 1 },
+    { field: 'primary_email', headerName: 'Primary Email', flex: 1 },
+    { field: 'referral_type', headerName: 'Referral Type', flex: 1 },
+    { field: 'employee', headerName: 'Referred By', flex: 1 },
+  ];
+
   return (
     <main>
       <h1>Clients</h1>
@@ -83,11 +92,15 @@ export default function Clients() {
         <input value={contact} onChange={e => setContact(e.target.value)} placeholder="Other Contact Info" />
         <button type="submit">Add</button>
       </form>
-      <ul>
-        {clients.map(c => (
-          <li key={c.id}>{c.name} - {c.primary_phone || ''}</li>
-        ))}
-      </ul>
+      <div style={{ width: '100%' }}>
+        <DataGrid
+          autoHeight
+          rows={clients}
+          columns={columns}
+          getRowId={(row) => row.id}
+          disableRowSelectionOnClick
+        />
+      </div>
     </main>
   );
 }
