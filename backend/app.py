@@ -105,6 +105,28 @@ def list_vendors():
     ])
 
 
+@app.route('/vendors/<int:vendor_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_vendor(vendor_id):
+    vendor = Vendor.query.get_or_404(vendor_id)
+    if request.method == 'GET':
+        return jsonify({
+            'id': vendor.id,
+            'name': vendor.name,
+            'contact_info': vendor.contact_info,
+        })
+    elif request.method == 'PUT':
+        data = request.get_json() or {}
+        for field in ['name', 'contact_info']:
+            if field in data:
+                setattr(vendor, field, data[field])
+        db.session.commit()
+        return jsonify({'id': vendor.id})
+    else:
+        db.session.delete(vendor)
+        db.session.commit()
+        return '', 204
+
+
 @app.route('/products', methods=['GET'])
 def list_products():
     products = Product.query.all()
@@ -125,6 +147,30 @@ def create_product():
     db.session.add(product)
     db.session.commit()
     return jsonify({'id': product.id}), 201
+
+
+@app.route('/products/<int:product_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_product(product_id):
+    product = Product.query.get_or_404(product_id)
+    if request.method == 'GET':
+        return jsonify({
+            'id': product.id,
+            'sku': product.sku,
+            'name': product.name,
+            'price': str(product.price) if product.price else None,
+            'vendor_id': product.vendor_id,
+        })
+    elif request.method == 'PUT':
+        data = request.get_json() or {}
+        for field in ['sku', 'name', 'price', 'vendor_id']:
+            if field in data:
+                setattr(product, field, data[field])
+        db.session.commit()
+        return jsonify({'id': product.id})
+    else:
+        db.session.delete(product)
+        db.session.commit()
+        return '', 204
 
 
 @app.route('/clients', methods=['POST'])
@@ -174,6 +220,40 @@ def list_clients():
         for c in clients
     ])
 
+
+@app.route('/clients/<int:client_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_client(client_id):
+    client = Client.query.get_or_404(client_id)
+    if request.method == 'GET':
+        return jsonify({
+            'id': client.id,
+            'name': client.name,
+            'first_name': client.first_name,
+            'last_name': client.last_name,
+            'primary_phone': client.primary_phone,
+            'primary_email': client.primary_email,
+            'secondary_phone': client.secondary_phone,
+            'secondary_email': client.secondary_email,
+            'referral_type': client.referral_type,
+            'employee_id': client.employee_id,
+            'contact_info': client.contact_info,
+        })
+    elif request.method == 'PUT':
+        data = request.get_json() or {}
+        for field in [
+            'name', 'first_name', 'last_name', 'primary_phone', 'primary_email',
+            'secondary_phone', 'secondary_email', 'referral_type', 'employee_id',
+            'contact_info'
+        ]:
+            if field in data:
+                setattr(client, field, data[field])
+        db.session.commit()
+        return jsonify({'id': client.id})
+    else:
+        db.session.delete(client)
+        db.session.commit()
+        return '', 204
+
 @app.route('/projects', methods=['POST'])
 def create_project():
     data = request.get_json() or {}
@@ -215,6 +295,30 @@ def list_projects():
         })
     return jsonify(result)
 
+
+@app.route('/projects/<int:project_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_project(project_id):
+    project = Project.query.get_or_404(project_id)
+    if request.method == 'GET':
+        return jsonify({
+            'id': project.id,
+            'name': project.name,
+            'description': project.description,
+            'start_date': project.start_date.isoformat() if project.start_date else None,
+            'client_id': project.client_id,
+        })
+    elif request.method == 'PUT':
+        data = request.get_json() or {}
+        for field in ['name', 'description', 'start_date', 'client_id']:
+            if field in data:
+                setattr(project, field, data[field])
+        db.session.commit()
+        return jsonify({'id': project.id})
+    else:
+        db.session.delete(project)
+        db.session.commit()
+        return '', 204
+
 @app.route('/leadstages', methods=['GET'])
 def list_lead_stages():
     stages = LeadStage.query.all()
@@ -243,6 +347,29 @@ def list_leads():
             'stage': l.stage.name if l.stage else None
         } for l in leads
     ])
+
+
+@app.route('/leads/<int:lead_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_lead(lead_id):
+    lead = Lead.query.get_or_404(lead_id)
+    if request.method == 'GET':
+        return jsonify({
+            'id': lead.id,
+            'name': lead.name,
+            'contact_info': lead.contact_info,
+            'stage_id': lead.stage_id,
+        })
+    elif request.method == 'PUT':
+        data = request.get_json() or {}
+        for field in ['name', 'contact_info', 'stage_id']:
+            if field in data:
+                setattr(lead, field, data[field])
+        db.session.commit()
+        return jsonify({'id': lead.id})
+    else:
+        db.session.delete(lead)
+        db.session.commit()
+        return '', 204
 
 
 @app.route('/contractstatuses', methods=['GET'])
@@ -377,6 +504,23 @@ def handle_task(task_id):
 def list_employees():
     employees = Employee.query.all()
     return jsonify([{'id': e.id, 'name': e.name} for e in employees])
+
+
+@app.route('/employees/<int:employee_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_employee(employee_id):
+    employee = Employee.query.get_or_404(employee_id)
+    if request.method == 'GET':
+        return jsonify({'id': employee.id, 'name': employee.name})
+    elif request.method == 'PUT':
+        data = request.get_json() or {}
+        if 'name' in data:
+            employee.name = data['name']
+            db.session.commit()
+        return jsonify({'id': employee.id})
+    else:
+        db.session.delete(employee)
+        db.session.commit()
+        return '', 204
 
 def create_tables_with_retry(retries: int = 5, delay: int = 2):
     """Create all tables, retrying if the database isn't ready."""
