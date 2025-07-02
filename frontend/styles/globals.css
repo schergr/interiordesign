@@ -46,3 +46,7 @@ button {
 button:hover {
   background: #005bb5;
 }
+.message {
+  margin-bottom: 0.5rem;
+  color: green;
+}

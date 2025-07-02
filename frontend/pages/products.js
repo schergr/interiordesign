@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 
+
 const API = 'http://localhost:3000';
+
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -9,6 +11,7 @@ export default function Products() {
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [vendorId, setVendorId] = useState('');
+  const [message, setMessage] = useState('');
 
   const fetchProducts = async () => {
     const res = await fetch(`${API}/products`);
@@ -26,11 +29,18 @@ export default function Products() {
 
   const submit = async (e) => {
     e.preventDefault();
+    const res = await fetch(`${API}/products`, {
+
     await fetch(`${API}/products`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sku, name, price, vendor_id: vendorId || null })
     });
+    if (res.ok) {
+      setMessage(`Added product: ${name}`);
+    } else {
+      setMessage('Error adding product');
+    }
     setSku('');
     setName('');
     setPrice('');
@@ -41,6 +51,7 @@ export default function Products() {
   return (
     <main>
       <h1>Products</h1>
+      {message && <p className="message">{message}</p>}
       <form onSubmit={submit} className="form">
         <input value={sku} onChange={e => setSku(e.target.value)} placeholder="SKU" required />
         <input value={name} onChange={e => setName(e.target.value)} placeholder="Name" required />
