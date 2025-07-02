@@ -62,3 +62,9 @@ class Inventory(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'))
     quantity = db.Column(db.Integer, default=0)
     product = db.relationship('Product')
+
+class Client(db.Model):
+    __tablename__ = 'clients'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+    contact_info = db.Column(db.String(256))
