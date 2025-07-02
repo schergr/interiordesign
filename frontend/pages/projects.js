@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
-import { DataGrid } from '@mui/x-data-grid';
+import {
+  DataGrid,
+  GridActionsCellItem,
+  GridRowModes,
+} from '@mui/x-data-grid';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SaveIcon from '@mui/icons-material/Save';
+import { putData, deleteData } from '../lib/api.js';
 
 const API = 'http://localhost:5000';
 
@@ -12,6 +20,7 @@ export default function Projects() {
   const [clientId, setClientId] = useState('');
   const [productIds, setProductIds] = useState([]);
   const [message, setMessage] = useState('');
+  const [rowModesModel, setRowModesModel] = useState({});
 
   const fetchProjects = async () => {
     const res = await fetch(`${API}/projects`);
@@ -19,10 +28,38 @@ export default function Projects() {
     setProjects(data);
   };
 
+  const processRowUpdate = async (newRow) => {
+    await putData(`${API}/projects/${newRow.id}`, newRow);
+    fetchProjects();
+    return newRow;
+  };
+
+  const handleEditClick = (id) => () => {
+    setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.Edit } });
+  };
+
+  const handleSaveClick = (id) => () => {
+    setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.View } });
+  };
+
+  const handleDeleteClick = (id) => async () => {
+    if (!window.confirm('Delete this project?')) return;
+    await deleteData(`${API}/projects/${id}`);
+    fetchProjects();
+  };
+
   const fetchClients = async () => {
     const res = await fetch(`${API}/clients`);
     const data = await res.json();
     setClients(data);
+  };
+
+  const handleRowEditStart = (params, event) => {
+    event.defaultMuiPrevented = true;
+  };
+
+  const handleRowEditStop = (params, event) => {
+    event.defaultMuiPrevented = true;
   };
 
   const fetchProducts = async () => {
@@ -65,6 +102,36 @@ export default function Projects() {
     { field: 'name', headerName: 'Name', flex: 1 },
     { field: 'start_date', headerName: 'Start Date', flex: 1 },
     { field: 'client', headerName: 'Client', flex: 1 },
+    {
+      field: 'actions',
+      type: 'actions',
+      getActions: (params) => {
+        const inEdit = rowModesModel[params.id]?.mode === GridRowModes.Edit;
+        return inEdit
+          ? [
+              <GridActionsCellItem
+                key="save"
+                icon={<SaveIcon />}
+                label="Save"
+                onClick={handleSaveClick(params.id)}
+              />,
+            ]
+          : [
+              <GridActionsCellItem
+                key="edit"
+                icon={<EditIcon />}
+                label="Edit"
+                onClick={handleEditClick(params.id)}
+              />,
+              <GridActionsCellItem
+                key="delete"
+                icon={<DeleteIcon />}
+                label="Delete"
+                onClick={handleDeleteClick(params.id)}
+              />,
+            ];
+      },
+    },
   ];
 
   return (
@@ -99,6 +166,12 @@ export default function Projects() {
           rows={projects}
           columns={columns}
           getRowId={(row) => row.id}
+          editMode="row"
+          processRowUpdate={processRowUpdate}
+          onRowEditStart={handleRowEditStart}
+          onRowEditStop={handleRowEditStop}
+          rowModesModel={rowModesModel}
+          onRowModesModelChange={setRowModesModel}
           disableRowSelectionOnClick
         />
       </div>

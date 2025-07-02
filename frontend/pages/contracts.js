@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
-import { DataGrid } from '@mui/x-data-grid';
+import {
+  DataGrid,
+  GridActionsCellItem,
+  GridRowModes,
+} from '@mui/x-data-grid';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SaveIcon from '@mui/icons-material/Save';
+import { putData, deleteData } from '../lib/api.js';
 
 const API = 'http://localhost:5000';
 
@@ -15,10 +23,31 @@ export default function Contracts() {
   const [statusId, setStatusId] = useState('');
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
+  const [rowModesModel, setRowModesModel] = useState({});
 
   const fetchContracts = async () => {
     const res = await fetch(`${API}/contracts`);
     setContracts(await res.json());
+  };
+
+  const processRowUpdate = async (newRow) => {
+    await putData(`${API}/contracts/${newRow.id}`, newRow);
+    fetchContracts();
+    return newRow;
+  };
+
+  const handleEditClick = (id) => () => {
+    setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.Edit } });
+  };
+
+  const handleSaveClick = (id) => () => {
+    setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.View } });
+  };
+
+  const handleDeleteClick = (id) => async () => {
+    if (!window.confirm('Delete this contract?')) return;
+    await deleteData(`${API}/contracts/${id}`);
+    fetchContracts();
   };
   const fetchClients = async () => {
     const res = await fetch(`${API}/clients`);
@@ -27,6 +56,14 @@ export default function Contracts() {
   const fetchEmployees = async () => {
     const res = await fetch(`${API}/employees`);
     setEmployees(await res.json());
+  };
+
+  const handleRowEditStart = (params, event) => {
+    event.defaultMuiPrevented = true;
+  };
+
+  const handleRowEditStop = (params, event) => {
+    event.defaultMuiPrevented = true;
   };
   const fetchProjects = async () => {
     const res = await fetch(`${API}/projects`);
@@ -83,6 +120,36 @@ export default function Contracts() {
           ? ''
           : currencyFormatter.format(Number(value))
     },
+    {
+      field: 'actions',
+      type: 'actions',
+      getActions: (params) => {
+        const inEdit = rowModesModel[params.id]?.mode === GridRowModes.Edit;
+        return inEdit
+          ? [
+              <GridActionsCellItem
+                key="save"
+                icon={<SaveIcon />}
+                label="Save"
+                onClick={handleSaveClick(params.id)}
+              />,
+            ]
+          : [
+              <GridActionsCellItem
+                key="edit"
+                icon={<EditIcon />}
+                label="Edit"
+                onClick={handleEditClick(params.id)}
+              />,
+              <GridActionsCellItem
+                key="delete"
+                icon={<DeleteIcon />}
+                label="Delete"
+                onClick={handleDeleteClick(params.id)}
+              />,
+            ];
+      },
+    },
   ];
 
   return (
@@ -115,6 +182,12 @@ export default function Contracts() {
           rows={contracts}
           columns={columns}
           getRowId={(row) => row.id}
+          editMode="row"
+          processRowUpdate={processRowUpdate}
+          onRowEditStart={handleRowEditStart}
+          onRowEditStop={handleRowEditStop}
+          rowModesModel={rowModesModel}
+          onRowModesModelChange={setRowModesModel}
           disableRowSelectionOnClick
         />
       </div>
