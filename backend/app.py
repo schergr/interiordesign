@@ -3,11 +3,20 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_httpauth import HTTPBasicAuth
 from flask_cors import CORS
+from googleapiclient.discovery import build
+from google.oauth2.service_account import Credentials
+import json
 
 try:
-    from .models import db, Role, User, Vendor, Product, Project, ProductProject, Inventory, Client, Employee, LeadStage, Lead
+    from .models import (
+        db, Role, User, Vendor, Product, Project, ProductProject, Inventory,
+        Client, Employee, LeadStage, Lead, ContractStatus, Contract, Task
+    )
 except ImportError:  # allows running as 'python app.py'
-    from models import db, Role, User, Vendor, Product, Project, ProductProject, Inventory, Client, Employee, LeadStage, Lead
+    from models import (
+        db, Role, User, Vendor, Product, Project, ProductProject, Inventory,
+        Client, Employee, LeadStage, Lead, ContractStatus, Contract, Task
+    )
 import os
 
 app = Flask(__name__)
@@ -18,6 +27,31 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 bcrypt = Bcrypt(app)
 auth = HTTPBasicAuth()
+
+
+def get_tasks_service():
+    creds_file = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE')
+    if not creds_file or not os.path.exists(creds_file):
+        return None
+    creds = Credentials.from_service_account_file(
+        creds_file, scopes=['https://www.googleapis.com/auth/tasks']
+    )
+    return build('tasks', 'v1', credentials=creds)
+
+
+def sync_task_to_google(task):
+    service = get_tasks_service()
+    if not service:
+        return
+    body = {'title': task.name}
+    if task.due_date:
+        body['due'] = f"{task.due_date.isoformat()}T00:00:00Z"
+    try:
+        res = service.tasks().insert(tasklist='@default', body=body).execute()
+        task.google_task_id = res.get('id')
+        db.session.commit()
+    except Exception as exc:
+        print('Google Tasks sync failed:', exc)
 
 @auth.verify_password
 def verify_password(username, password):
@@ -210,6 +244,135 @@ def list_leads():
         } for l in leads
     ])
 
+
+@app.route('/contractstatuses', methods=['GET'])
+def list_contract_statuses():
+    statuses = ContractStatus.query.all()
+    return jsonify([{'id': s.id, 'name': s.name} for s in statuses])
+
+
+@app.route('/contracts', methods=['POST'])
+def create_contract():
+    data = request.get_json() or {}
+    contract = Contract(
+        client_id=data.get('client_id'),
+        employee_id=data.get('employee_id'),
+        project_id=data.get('project_id'),
+        lead_id=data.get('lead_id'),
+        status_id=data.get('status_id'),
+        start_date=data.get('start_date'),
+        end_date=data.get('end_date'),
+        amount=data.get('amount'),
+    )
+    db.session.add(contract)
+    db.session.commit()
+    return jsonify({'id': contract.id}), 201
+
+
+@app.route('/contracts', methods=['GET'])
+def list_contracts():
+    contracts = Contract.query.all()
+    return jsonify([
+        {
+            'id': c.id,
+            'client': c.client.name if c.client else None,
+            'employee': c.employee.name if c.employee else None,
+            'project': c.project.name if c.project else None,
+            'lead': c.lead.name if c.lead else None,
+            'status': c.status.name if c.status else None,
+            'amount': str(c.amount) if c.amount else None,
+        }
+        for c in contracts
+    ])
+
+
+@app.route('/contracts/<int:contract_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_contract(contract_id):
+    contract = Contract.query.get_or_404(contract_id)
+    if request.method == 'GET':
+        return jsonify({
+            'id': contract.id,
+            'client_id': contract.client_id,
+            'employee_id': contract.employee_id,
+            'project_id': contract.project_id,
+            'lead_id': contract.lead_id,
+            'status_id': contract.status_id,
+            'start_date': contract.start_date.isoformat() if contract.start_date else None,
+            'end_date': contract.end_date.isoformat() if contract.end_date else None,
+            'amount': str(contract.amount) if contract.amount else None,
+        })
+    elif request.method == 'PUT':
+        data = request.get_json() or {}
+        for field in [
+            'client_id', 'employee_id', 'project_id', 'lead_id',
+            'status_id', 'start_date', 'end_date', 'amount'
+        ]:
+            if field in data:
+                setattr(contract, field, data[field])
+        db.session.commit()
+        return jsonify({'id': contract.id})
+    else:
+        db.session.delete(contract)
+        db.session.commit()
+        return '', 204
+
+
+@app.route('/tasks', methods=['POST'])
+def create_task():
+    data = request.get_json() or {}
+    name = data.get('name')
+    if not name:
+        return jsonify({'error': 'Invalid input'}), 400
+    task = Task(
+        name=name,
+        due_date=data.get('due_date'),
+        completed=data.get('completed', False),
+        contract_id=data.get('contract_id'),
+    )
+    db.session.add(task)
+    db.session.commit()
+    sync_task_to_google(task)
+    return jsonify({'id': task.id}), 201
+
+
+@app.route('/tasks', methods=['GET'])
+def list_tasks():
+    tasks = Task.query.all()
+    return jsonify([
+        {
+            'id': t.id,
+            'name': t.name,
+            'completed': t.completed,
+            'due_date': t.due_date.isoformat() if t.due_date else None,
+            'contract_id': t.contract_id,
+        }
+        for t in tasks
+    ])
+
+
+@app.route('/tasks/<int:task_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    if request.method == 'GET':
+        return jsonify({
+            'id': task.id,
+            'name': task.name,
+            'completed': task.completed,
+            'due_date': task.due_date.isoformat() if task.due_date else None,
+            'contract_id': task.contract_id,
+        })
+    elif request.method == 'PUT':
+        data = request.get_json() or {}
+        for field in ['name', 'completed', 'due_date', 'contract_id']:
+            if field in data:
+                setattr(task, field, data[field])
+        db.session.commit()
+        return jsonify({'id': task.id})
+    else:
+        db.session.delete(task)
+        db.session.commit()
+        return '', 204
+
 @app.route('/employees', methods=['GET'])
 def list_employees():
     employees = Employee.query.all()
@@ -225,5 +388,9 @@ if __name__ == '__main__':
         if Employee.query.count() == 0:
             for name in ['Stephanie Scher', 'Sable Murphy', 'Jennifer Stewart', 'Daniel Murphy']:
                 db.session.add(Employee(name=name))
+            db.session.commit()
+        if ContractStatus.query.count() == 0:
+            for name in ['Draft', 'Active', 'Completed']:
+                db.session.add(ContractStatus(name=name))
             db.session.commit()
     app.run(host='0.0.0.0', port=5000)

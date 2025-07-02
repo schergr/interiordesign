@@ -9,6 +9,7 @@ export default function Nav() {
       <Link href="/clients">Clients</Link>
       <Link href="/projects">Projects</Link>
       <Link href="/leads">Leads</Link>
+      <Link href="/contracts">Contracts</Link>
     </nav>
   );
 }

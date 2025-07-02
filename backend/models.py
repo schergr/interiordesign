@@ -98,3 +98,39 @@ class Lead(db.Model):
     contact_info = db.Column(db.String(256))
     stage_id = db.Column(db.Integer, db.ForeignKey('lead_stages.id'))
     stage = db.relationship('LeadStage')
+
+class ContractStatus(db.Model):
+    __tablename__ = 'contract_statuses'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True, nullable=False)
+
+
+class Contract(db.Model):
+    __tablename__ = 'contracts'
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'))
+    employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'))
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    lead_id = db.Column(db.Integer, db.ForeignKey('leads.id'))
+    status_id = db.Column(db.Integer, db.ForeignKey('contract_statuses.id'))
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+    amount = db.Column(db.Numeric(10,2))
+
+    client = db.relationship('Client')
+    employee = db.relationship('Employee')
+    project = db.relationship('Project')
+    lead = db.relationship('Lead')
+    status = db.relationship('ContractStatus')
+
+
+class Task(db.Model):
+    __tablename__ = 'tasks'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+    due_date = db.Column(db.Date)
+    completed = db.Column(db.Boolean, default=False)
+    contract_id = db.Column(db.Integer, db.ForeignKey('contracts.id'))
+    google_task_id = db.Column(db.String(128))
+
+    contract = db.relationship('Contract')
