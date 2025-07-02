@@ -5,7 +5,9 @@ from flask_httpauth import HTTPBasicAuth
 from flask_cors import CORS
 from googleapiclient.discovery import build
 from google.oauth2.service_account import Credentials
+from sqlalchemy.exc import OperationalError
 import json
+import time
 
 try:
     from .models import (
@@ -378,9 +380,25 @@ def list_employees():
     employees = Employee.query.all()
     return jsonify([{'id': e.id, 'name': e.name} for e in employees])
 
+def create_tables_with_retry(retries: int = 5, delay: int = 2):
+    """Create all tables, retrying if the database isn't ready."""
+    for attempt in range(1, retries + 1):
+        try:
+            db.create_all()
+            return True
+        except OperationalError as exc:
+            print(
+                f"Database not ready (attempt {attempt}/{retries}): {exc}\nRetrying in {delay}s..."
+            )
+            time.sleep(delay)
+    print(f"Failed to initialize database after {retries} attempts.")
+    return False
+
+
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()
+        if not create_tables_with_retry():
+            exit(1)
         if LeadStage.query.count() == 0:
             for name in ['New', 'Follow-Up', 'Sold', 'Lost']:
                 db.session.add(LeadStage(name=name))

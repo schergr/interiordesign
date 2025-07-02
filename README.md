@@ -12,6 +12,7 @@ docker-compose up --build
 
 The API will be available on port `5000` and the database on port `5432` inside the container network.
 The Next.js frontend will be served on port `3000`.
+The backend waits for the database to become available, so you may see connection attempts for a few seconds when starting the stack.
 The `frontend` service mounts `/app/node_modules` as a volume so dependencies aren't lost when the source directory is mounted.
 
 To work on the frontend independently:
