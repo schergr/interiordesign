@@ -498,6 +498,7 @@ def list_contracts():
             'client': c.client.name if c.client else None,
             'employee': c.employee.name if c.employee else None,
             'project': c.project.name if c.project else None,
+            'project_id': c.project_id,
             'lead': c.lead.name if c.lead else None,
             'status': c.status.name if c.status else None,
             'amount': str(c.amount) if c.amount else None,

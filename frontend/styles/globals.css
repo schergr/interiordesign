@@ -81,3 +81,19 @@ button:hover {
   padding: 0.5rem;
   border-radius: 4px;
 }
+
+.card.fixed {
+  width: 140px;
+  text-align: center;
+}
+
+.card-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
