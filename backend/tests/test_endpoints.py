@@ -5,6 +5,7 @@ import werkzeug
 if not hasattr(werkzeug, '__version__'):
     werkzeug.__version__ = '0'
 from backend.app import app, db, Employee, LeadStage, ContractStatus
+from io import BytesIO
 
 
 def setup_function(function):
@@ -28,7 +29,8 @@ def test_vendor_client_product_flow():
             'first_name': 'John',
             'last_name': 'Doe',
             'primary_email': 'john@example.com',
-            'primary_phone': '111-2222'
+            'primary_phone': '111-2222',
+            'site_url': 'http://example.com'
         })
         assert rv.status_code == 201
         vendor_id = rv.get_json()['id']
@@ -44,6 +46,23 @@ def test_vendor_client_product_flow():
         vendors = rv.get_json()
         assert len(vendors) == 1
         assert vendors[0]['first_name'] == 'John'
+        assert vendors[0]['site_url'] == 'http://example.com'
+
+        rv = client.post(
+            f'/vendors/{vendor_id}/documents',
+            data={'file': (BytesIO(b'hello'), 'hello.txt')},
+            content_type='multipart/form-data'
+        )
+        assert rv.status_code == 201
+        doc_id = rv.get_json()['id']
+
+        rv = client.get(f'/vendors/{vendor_id}/documents')
+        assert rv.status_code == 200
+        assert len(rv.get_json()) == 1
+
+        rv = client.delete(f'/vendors/{vendor_id}/documents/{doc_id}')
+        assert rv.status_code == 204
+        assert client.get(f'/vendors/{vendor_id}/documents').get_json() == []
 
         rv = client.get('/products')
         assert rv.status_code == 200
@@ -89,14 +108,16 @@ def test_crud_endpoints():
         client = app.test_client()
 
         # Vendor CRUD
-        rv = client.post('/vendors', json={'name': 'V1', 'primary_email': 'a@b.c'})
+        rv = client.post('/vendors', json={'name': 'V1', 'primary_email': 'a@b.c', 'site_url': 'http://foo'})
         vid = rv.get_json()['id']
         rv = client.get(f'/vendors/{vid}')
         assert rv.get_json()['primary_email'] == 'a@b.c'
-        rv = client.put(f'/vendors/{vid}', json={'primary_email': 'd@e.f'})
+        assert rv.get_json()['site_url'] == 'http://foo'
+        rv = client.put(f'/vendors/{vid}', json={'primary_email': 'd@e.f', 'site_url': 'http://bar'})
         assert rv.status_code == 200
         rv = client.get(f'/vendors/{vid}')
         assert rv.get_json()['primary_email'] == 'd@e.f'
+        assert rv.get_json()['site_url'] == 'http://bar'
         rv = client.delete(f'/vendors/{vid}')
         assert rv.status_code == 204
         assert client.get('/vendors').get_json() == []

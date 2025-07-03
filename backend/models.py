@@ -35,7 +35,10 @@ class Vendor(db.Model):
     state = db.Column(db.String(32))
     zip_code = db.Column(db.String(10))
     tax_id = db.Column(db.String(64))
+    site_url = db.Column(db.String(256))
+    catalog_url = db.Column(db.String(256))
     products = db.relationship('Product', back_populates='vendor')
+    documents = db.relationship('Document', back_populates='vendor')
 
     def to_dict(self):
         return {
@@ -55,7 +58,24 @@ class Vendor(db.Model):
             'state': self.state,
             'zip_code': self.zip_code,
             'tax_id': self.tax_id,
-            'products': [p.name for p in self.products]
+            'site_url': self.site_url,
+            'catalog_url': self.catalog_url,
+            'products': [p.name for p in self.products],
+            'documents': [d.to_dict() for d in self.documents]
+        }
+
+
+class Document(db.Model):
+    __tablename__ = 'documents'
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(256), nullable=False)
+    vendor_id = db.Column(db.Integer, db.ForeignKey('vendors.id'))
+    vendor = db.relationship('Vendor', back_populates='documents')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'filename': self.filename
         }
 
 class Product(db.Model):

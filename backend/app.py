@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_bcrypt import Bcrypt
 from flask_httpauth import HTTPBasicAuth
 from flask_cors import CORS
@@ -6,18 +6,19 @@ from googleapiclient.discovery import build
 from google.oauth2.service_account import Credentials
 from sqlalchemy.exc import OperationalError
 import time
+from werkzeug.utils import secure_filename
 
 try:
     from .models import (
         db, Role, User, Vendor, Product, Project, ProductProject, Inventory,
         Client, Employee, LeadStage, Lead, ContractStatus, Contract, Task,
-        Room, Item, Proposal, Invoice, Note
+        Room, Item, Proposal, Invoice, Note, Document
     )
 except ImportError:  # allows running as 'python app.py'
     from models import (
         db, Role, User, Vendor, Product, Project, ProductProject, Inventory,
         Client, Employee, LeadStage, Lead, ContractStatus, Contract, Task,
-        Room, Item, Proposal, Invoice, Note
+        Room, Item, Proposal, Invoice, Note, Document
     )
 import os
 
@@ -25,6 +26,9 @@ app = Flask(__name__)
 CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@db:5432/interiordesign')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 db.init_app(app)
 bcrypt = Bcrypt(app)
@@ -108,6 +112,8 @@ def create_vendor():
         state=data.get('state'),
         zip_code=data.get('zip_code'),
         tax_id=data.get('tax_id'),
+        site_url=data.get('site_url'),
+        catalog_url=data.get('catalog_url'),
     )
     db.session.add(vendor)
     db.session.commit()
@@ -130,7 +136,8 @@ def handle_vendor(vendor_id):
         for field in [
             'name', 'contact_info', 'first_name', 'last_name', 'primary_email',
             'secondary_email', 'primary_phone', 'secondary_phone', 'description',
-            'address1', 'address2', 'city', 'state', 'zip_code', 'tax_id'
+            'address1', 'address2', 'city', 'state', 'zip_code', 'tax_id',
+            'site_url', 'catalog_url'
         ]:
             if field in data:
                 setattr(vendor, field, data[field])
@@ -140,6 +147,35 @@ def handle_vendor(vendor_id):
         db.session.delete(vendor)
         db.session.commit()
         return '', 204
+
+
+@app.route('/vendors/<int:vendor_id>/documents', methods=['GET', 'POST'])
+def vendor_documents(vendor_id):
+    vendor = Vendor.query.get_or_404(vendor_id)
+    if request.method == 'GET':
+        return jsonify([d.to_dict() for d in vendor.documents])
+    file = request.files.get('file')
+    if not file:
+        return jsonify({'error': 'No file provided'}), 400
+    filename = secure_filename(file.filename)
+    filename = f"{int(time.time()*1000)}_{filename}"
+    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(path)
+    doc = Document(filename=filename, vendor_id=vendor.id)
+    db.session.add(doc)
+    db.session.commit()
+    return jsonify({'id': doc.id, 'filename': filename}), 201
+
+
+@app.route('/vendors/<int:vendor_id>/documents/<int:doc_id>', methods=['DELETE', 'GET'])
+def handle_document(vendor_id, doc_id):
+    doc = Document.query.filter_by(id=doc_id, vendor_id=vendor_id).first_or_404()
+    if request.method == 'GET':
+        return send_from_directory(app.config['UPLOAD_FOLDER'], doc.filename)
+    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], doc.filename))
+    db.session.delete(doc)
+    db.session.commit()
+    return '', 204
 
 
 @app.route('/products', methods=['GET'])

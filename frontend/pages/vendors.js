@@ -22,7 +22,7 @@ export default function Vendors() {
   const [message, setMessage] = useState('');
 
   // fields for creating new vendor
-  const [newVendor, setNewVendor] = useState({ name: '', contact_info: '', first_name: '', last_name: '', primary_email: '', secondary_email: '', primary_phone: '', secondary_phone: '', description: '', address1: '', address2: '', city: '', state: '', zip_code: '', tax_id: '' });
+  const [newVendor, setNewVendor] = useState({ name: '', contact_info: '', first_name: '', last_name: '', primary_email: '', secondary_email: '', primary_phone: '', secondary_phone: '', description: '', address1: '', address2: '', city: '', state: '', zip_code: '', tax_id: '', site_url: '', catalog_url: '' });
 
   const fetchVendors = async () => {
     const res = await fetch(`${API}/vendors`);
@@ -62,7 +62,7 @@ export default function Vendors() {
     });
     if (res.ok) {
       setMessage(`Added vendor: ${newVendor.name}`);
-      setNewVendor({ name: '', contact_info: '', first_name: '', last_name: '', primary_email: '', secondary_email: '', primary_phone: '', secondary_phone: '', description: '', address1: '', address2: '', city: '', state: '', zip_code: '', tax_id: '' });
+      setNewVendor({ name: '', contact_info: '', first_name: '', last_name: '', primary_email: '', secondary_email: '', primary_phone: '', secondary_phone: '', description: '', address1: '', address2: '', city: '', state: '', zip_code: '', tax_id: '', site_url: '', catalog_url: '' });
       fetchVendors();
     } else {
       setMessage('Error adding vendor');
@@ -106,6 +106,8 @@ export default function Vendors() {
         <input value={newVendor.state} onChange={e => setNewVendor({ ...newVendor, state: e.target.value })} placeholder="State" />
         <input value={newVendor.zip_code} onChange={e => setNewVendor({ ...newVendor, zip_code: e.target.value })} placeholder="Zip" />
         <input value={newVendor.tax_id} onChange={e => setNewVendor({ ...newVendor, tax_id: e.target.value })} placeholder="Tax ID" />
+        <input value={newVendor.site_url} onChange={e => setNewVendor({ ...newVendor, site_url: e.target.value })} placeholder="Site URL" />
+        <input value={newVendor.catalog_url} onChange={e => setNewVendor({ ...newVendor, catalog_url: e.target.value })} placeholder="Catalog URL" />
         <input value={newVendor.contact_info} onChange={e => setNewVendor({ ...newVendor, contact_info: e.target.value })} placeholder="Other Contact" />
         <button type="submit">Add</button>
       </form>
@@ -138,11 +140,25 @@ export default function Vendors() {
             <input value={form.state || ''} onChange={e => setForm({...form,state:e.target.value})} placeholder="State" />
             <input value={form.zip_code || ''} onChange={e => setForm({...form,zip_code:e.target.value})} placeholder="Zip" />
             <input value={form.tax_id || ''} onChange={e => setForm({...form,tax_id:e.target.value})} placeholder="Tax ID" />
+            <input value={form.site_url || ''} onChange={e => setForm({...form,site_url:e.target.value})} placeholder="Site URL" />
+            <input value={form.catalog_url || ''} onChange={e => setForm({...form,catalog_url:e.target.value})} placeholder="Catalog URL" />
             <div>
               <strong>Products:</strong>
               <ul>
                 {(form.products || []).map((p,i) => <li key={i}>{p}</li>)}
               </ul>
+            </div>
+            <div>
+              <strong>Documents:</strong>
+              <ul>
+                {(form.documents || []).map(d => (
+                  <li key={d.id}>
+                    <a href={`${API}/vendors/${form.id}/documents/${d.id}`}>{d.filename}</a>
+                    <button type="button" onClick={async () => { await deleteData(`${API}/vendors/${form.id}/documents/${d.id}`); const res = await fetch(`${API}/vendors/${form.id}`); setForm(await res.json()); }}>Delete</button>
+                  </li>
+                ))}
+              </ul>
+              <input type="file" onChange={async e => { if(!e.target.files[0]) return; const fd = new FormData(); fd.append('file', e.target.files[0]); await fetch(`${API}/vendors/${form.id}/documents`, { method: 'POST', body: fd }); const res = await fetch(`${API}/vendors/${form.id}`); setForm(await res.json()); }} />
             </div>
           </DialogContent>
           <DialogActions>
