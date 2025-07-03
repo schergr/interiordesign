@@ -2,29 +2,38 @@ import { useState, useEffect } from 'react';
 import {
   DataGrid,
   GridActionsCellItem,
-  GridRowModes,
 } from '@mui/x-data-grid';
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SaveIcon from '@mui/icons-material/Save';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+} from '@mui/material';
 import { putData, deleteData } from '../lib/api.js';
 
 const API = 'http://localhost:5000';
 
 export default function Clients() {
+  const emptyClient = {
+    name: '',
+    first_name: '',
+    last_name: '',
+    primary_phone: '',
+    primary_email: '',
+    secondary_phone: '',
+    secondary_email: '',
+    referral_type: '',
+    employee_id: '',
+    contact_info: '',
+  };
+
   const [clients, setClients] = useState([]);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [primaryPhone, setPrimaryPhone] = useState('');
-  const [primaryEmail, setPrimaryEmail] = useState('');
-  const [secondaryPhone, setSecondaryPhone] = useState('');
-  const [secondaryEmail, setSecondaryEmail] = useState('');
-  const [referralType, setReferralType] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
-  const [contact, setContact] = useState('');
   const [employees, setEmployees] = useState([]);
+  const [form, setForm] = useState(emptyClient);
+  const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
-  const [rowModesModel, setRowModesModel] = useState({});
 
   const fetchClients = async () => {
     const res = await fetch(`${API}/clients`);
@@ -32,18 +41,11 @@ export default function Clients() {
     setClients(data);
   };
 
-  const processRowUpdate = async (newRow) => {
-    await putData(`${API}/clients/${newRow.id}`, newRow);
-    fetchClients();
-    return newRow;
-  };
-
-  const handleEditClick = (id) => () => {
-    setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.Edit } });
-  };
-
-  const handleSaveClick = (id) => () => {
-    setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.View } });
+  const handleRowClick = async (params) => {
+    const res = await fetch(`${API}/clients/${params.row.id}`);
+    const data = await res.json();
+    setForm(data);
+    setOpen(true);
   };
 
   const handleDeleteClick = (id) => async () => {
@@ -58,48 +60,22 @@ export default function Clients() {
     setEmployees(data);
   };
 
-  const handleRowEditStart = (params, event) => {
-    event.defaultMuiPrevented = true;
-  };
-
-  const handleRowEditStop = (params, event) => {
-    event.defaultMuiPrevented = true;
-  };
-
   useEffect(() => { fetchClients(); fetchEmployees(); }, []);
 
-  const submit = async (e) => {
-    e.preventDefault();
-    const res = await fetch(`${API}/clients`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        first_name: firstName,
-        last_name: lastName,
-        primary_phone: primaryPhone,
-        primary_email: primaryEmail,
-        secondary_phone: secondaryPhone,
-        secondary_email: secondaryEmail,
-        referral_type: referralType,
-        employee_id: employeeId || null,
-        contact_info: contact
-      })
-    });
-    if (res.ok) {
-      setMessage(`Added client: ${firstName} ${lastName}`);
-      fetchClients();
+  const closeDialog = () => { setOpen(false); };
+
+  const saveDialog = async () => {
+    if (form.id === undefined) {
+      await fetch(`${API}/clients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
     } else {
-      setMessage('Error adding client');
+      await putData(`${API}/clients/${form.id}`, form);
     }
-    setFirstName('');
-    setLastName('');
-    setPrimaryPhone('');
-    setPrimaryEmail('');
-    setSecondaryPhone('');
-    setSecondaryEmail('');
-    setReferralType('');
-    setEmployeeId('');
-    setContact('');
+    setOpen(false);
+    fetchClients();
   };
 
   const columns = [
@@ -111,32 +87,14 @@ export default function Clients() {
     {
       field: 'actions',
       type: 'actions',
-      getActions: (params) => {
-        const inEdit = rowModesModel[params.id]?.mode === GridRowModes.Edit;
-        return inEdit
-          ? [
-              <GridActionsCellItem
-                key="save"
-                icon={<SaveIcon />}
-                label="Save"
-                onClick={handleSaveClick(params.id)}
-              />,
-            ]
-          : [
-              <GridActionsCellItem
-                key="edit"
-                icon={<EditIcon />}
-                label="Edit"
-                onClick={handleEditClick(params.id)}
-              />,
-              <GridActionsCellItem
-                key="delete"
-                icon={<DeleteIcon />}
-                label="Delete"
-                onClick={handleDeleteClick(params.id)}
-              />,
-            ];
-      },
+      getActions: (params) => [
+        <GridActionsCellItem
+          key="delete"
+          icon={<DeleteIcon />}
+          label="Delete"
+          onClick={handleDeleteClick(params.id)}
+        />,
+      ],
     },
   ];
 
@@ -144,36 +102,41 @@ export default function Clients() {
     <main>
       <h1>Clients</h1>
       {message && <p className="message">{message}</p>}
-      <form onSubmit={submit} className="form" style={{flexWrap:'wrap'}}>
-        <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First Name" required />
-        <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last Name" required />
-        <input value={primaryPhone} onChange={e => setPrimaryPhone(e.target.value)} placeholder="Primary Phone" />
-        <input value={primaryEmail} onChange={e => setPrimaryEmail(e.target.value)} placeholder="Primary Email" />
-        <input value={secondaryPhone} onChange={e => setSecondaryPhone(e.target.value)} placeholder="Secondary Phone" />
-        <input value={secondaryEmail} onChange={e => setSecondaryEmail(e.target.value)} placeholder="Secondary Email" />
-        <input value={referralType} onChange={e => setReferralType(e.target.value)} placeholder="Referral Type" />
-        <select value={employeeId} onChange={e => setEmployeeId(e.target.value)}>
-          <option value="">Referred By</option>
-          {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
-        </select>
-        <input value={contact} onChange={e => setContact(e.target.value)} placeholder="Other Contact Info" />
-        <button type="submit">Add</button>
-      </form>
+      <button onClick={() => { setForm(emptyClient); setOpen(true); }}>New Client</button>
       <div style={{ width: '100%' }}>
         <DataGrid
           autoHeight
           rows={clients}
           columns={columns}
           getRowId={(row) => row.id}
-          editMode="row"
-          processRowUpdate={processRowUpdate}
-          onRowEditStart={handleRowEditStart}
-          onRowEditStop={handleRowEditStop}
-          rowModesModel={rowModesModel}
-          onRowModesModelChange={setRowModesModel}
+          onRowClick={handleRowClick}
           disableRowSelectionOnClick
         />
       </div>
+
+      {open && (
+        <Dialog open={open} onClose={closeDialog} fullWidth>
+          <DialogTitle>Edit Client</DialogTitle>
+          <DialogContent style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>
+            <input value={form.first_name || ''} onChange={e => setForm({...form, first_name: e.target.value})} placeholder="First Name" />
+            <input value={form.last_name || ''} onChange={e => setForm({...form, last_name: e.target.value})} placeholder="Last Name" />
+            <input value={form.primary_phone || ''} onChange={e => setForm({...form, primary_phone: e.target.value})} placeholder="Primary Phone" />
+            <input value={form.primary_email || ''} onChange={e => setForm({...form, primary_email: e.target.value})} placeholder="Primary Email" />
+            <input value={form.secondary_phone || ''} onChange={e => setForm({...form, secondary_phone: e.target.value})} placeholder="Secondary Phone" />
+            <input value={form.secondary_email || ''} onChange={e => setForm({...form, secondary_email: e.target.value})} placeholder="Secondary Email" />
+            <input value={form.referral_type || ''} onChange={e => setForm({...form, referral_type: e.target.value})} placeholder="Referral Type" />
+            <select value={form.employee_id || ''} onChange={e => setForm({...form, employee_id: e.target.value})}>
+              <option value="">Referred By</option>
+              {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+            </select>
+            <input value={form.contact_info || ''} onChange={e => setForm({...form, contact_info: e.target.value})} placeholder="Other Contact Info" />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeDialog}>Cancel</Button>
+            <Button onClick={saveDialog}>Save</Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </main>
   );
 }
