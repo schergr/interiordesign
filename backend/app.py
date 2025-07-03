@@ -92,7 +92,23 @@ def create_vendor():
     name = data.get('name')
     if not name:
         return jsonify({'error': 'Invalid input'}), 400
-    vendor = Vendor(name=name, contact_info=data.get('contact_info'))
+    vendor = Vendor(
+        name=name,
+        contact_info=data.get('contact_info'),
+        first_name=data.get('first_name'),
+        last_name=data.get('last_name'),
+        primary_email=data.get('primary_email'),
+        secondary_email=data.get('secondary_email'),
+        primary_phone=data.get('primary_phone'),
+        secondary_phone=data.get('secondary_phone'),
+        description=data.get('description'),
+        address1=data.get('address1'),
+        address2=data.get('address2'),
+        city=data.get('city'),
+        state=data.get('state'),
+        zip_code=data.get('zip_code'),
+        tax_id=data.get('tax_id'),
+    )
     db.session.add(vendor)
     db.session.commit()
     return jsonify({'id': vendor.id}), 201
@@ -101,24 +117,21 @@ def create_vendor():
 @app.route('/vendors', methods=['GET'])
 def list_vendors():
     vendors = Vendor.query.all()
-    return jsonify([
-        {'id': v.id, 'name': v.name, 'contact_info': v.contact_info}
-        for v in vendors
-    ])
+    return jsonify([v.to_dict() for v in vendors])
 
 
 @app.route('/vendors/<int:vendor_id>', methods=['GET', 'PUT', 'DELETE'])
 def handle_vendor(vendor_id):
     vendor = Vendor.query.get_or_404(vendor_id)
     if request.method == 'GET':
-        return jsonify({
-            'id': vendor.id,
-            'name': vendor.name,
-            'contact_info': vendor.contact_info,
-        })
+        return jsonify(vendor.to_dict())
     elif request.method == 'PUT':
         data = request.get_json() or {}
-        for field in ['name', 'contact_info']:
+        for field in [
+            'name', 'contact_info', 'first_name', 'last_name', 'primary_email',
+            'secondary_email', 'primary_phone', 'secondary_phone', 'description',
+            'address1', 'address2', 'city', 'state', 'zip_code', 'tax_id'
+        ]:
             if field in data:
                 setattr(vendor, field, data[field])
         db.session.commit()

@@ -23,7 +23,13 @@ def setup_function(function):
 def test_vendor_client_product_flow():
     with app.app_context():
         client = app.test_client()
-        rv = client.post('/vendors', json={'name': 'Vendor1'})
+        rv = client.post('/vendors', json={
+            'name': 'Vendor1',
+            'first_name': 'John',
+            'last_name': 'Doe',
+            'primary_email': 'john@example.com',
+            'primary_phone': '111-2222'
+        })
         assert rv.status_code == 201
         vendor_id = rv.get_json()['id']
 
@@ -35,7 +41,9 @@ def test_vendor_client_product_flow():
 
         rv = client.get('/vendors')
         assert rv.status_code == 200
-        assert len(rv.get_json()) == 1
+        vendors = rv.get_json()
+        assert len(vendors) == 1
+        assert vendors[0]['first_name'] == 'John'
 
         rv = client.get('/products')
         assert rv.status_code == 200
@@ -81,14 +89,14 @@ def test_crud_endpoints():
         client = app.test_client()
 
         # Vendor CRUD
-        rv = client.post('/vendors', json={'name': 'V1'})
+        rv = client.post('/vendors', json={'name': 'V1', 'primary_email': 'a@b.c'})
         vid = rv.get_json()['id']
         rv = client.get(f'/vendors/{vid}')
-        assert rv.get_json()['name'] == 'V1'
-        rv = client.put(f'/vendors/{vid}', json={'name': 'V2'})
+        assert rv.get_json()['primary_email'] == 'a@b.c'
+        rv = client.put(f'/vendors/{vid}', json={'primary_email': 'd@e.f'})
         assert rv.status_code == 200
         rv = client.get(f'/vendors/{vid}')
-        assert rv.get_json()['name'] == 'V2'
+        assert rv.get_json()['primary_email'] == 'd@e.f'
         rv = client.delete(f'/vendors/{vid}')
         assert rv.status_code == 204
         assert client.get('/vendors').get_json() == []
