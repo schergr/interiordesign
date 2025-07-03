@@ -1,6 +1,6 @@
 # Interior Design Platform
 
-This repository provides a very small starting point for an interior design platform. It contains a Flask backend and a Postgres database bundled together using Docker Compose. The backend exposes a few placeholder endpoints and basic models for users, roles, products, projects and warehouse inventory.
+This repository provides a starting point for an interior design platform. It contains a Flask backend and a Postgres database bundled together using Docker Compose. The backend exposes CRUD endpoints for many resources and now includes simple import/export helpers. A Next.js frontend offers a small dashboard and management screens.
 
 ## Running locally
 
@@ -30,6 +30,12 @@ cd backend
 pip install -r requirements.txt
 pytest
 ```
+
+## Data import and export
+
+Each resource can be exported as JSON via `/export/<model>` and imported using
+`/import/<model>`. The model name matches the plural form used by the normal
+endpoints (e.g. `vendors`, `clients`).
 
 ## Environment
 
