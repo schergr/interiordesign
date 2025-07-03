@@ -2,24 +2,27 @@ import { useState, useEffect } from 'react';
 import {
   DataGrid,
   GridActionsCellItem,
-  GridRowModes,
 } from '@mui/x-data-grid';
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import SaveIcon from '@mui/icons-material/Save';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+} from '@mui/material';
 import { putData, deleteData } from '../lib/api.js';
 
 const API = 'http://localhost:5000';
 
 export default function Products() {
+  const emptyProduct = { sku: '', name: '', price: '', vendor_id: '' };
+
   const [products, setProducts] = useState([]);
   const [vendors, setVendors] = useState([]);
-  const [sku, setSku] = useState('');
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [vendorId, setVendorId] = useState('');
+  const [form, setForm] = useState(emptyProduct);
+  const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
-  const [rowModesModel, setRowModesModel] = useState({});
 
   const fetchProducts = async () => {
     const res = await fetch(`${API}/products`);
@@ -27,18 +30,27 @@ export default function Products() {
     setProducts(data);
   };
 
-  const processRowUpdate = async (newRow) => {
-    await putData(`${API}/products/${newRow.id}`, newRow);
+  const handleRowClick = async (params) => {
+    const res = await fetch(`${API}/products/${params.row.id}`);
+    const data = await res.json();
+    setForm(data);
+    setOpen(true);
+  };
+
+  const closeDialog = () => { setOpen(false); };
+
+  const saveDialog = async () => {
+    if (form.id === undefined) {
+      await fetch(`${API}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+    } else {
+      await putData(`${API}/products/${form.id}`, form);
+    }
+    setOpen(false);
     fetchProducts();
-    return newRow;
-  };
-
-  const handleEditClick = (id) => () => {
-    setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.Edit } });
-  };
-
-  const handleSaveClick = (id) => () => {
-    setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.View } });
   };
 
   const handleDeleteClick = (id) => async () => {
@@ -53,34 +65,7 @@ export default function Products() {
     setVendors(data);
   };
 
-  const handleRowEditStart = (params, event) => {
-    event.defaultMuiPrevented = true;
-  };
-
-  const handleRowEditStop = (params, event) => {
-    event.defaultMuiPrevented = true;
-  };
-
   useEffect(() => { fetchProducts(); fetchVendors(); }, []);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    const res = await fetch(`${API}/products`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sku, name, price, vendor_id: vendorId || null })
-    });
-    if (res.ok) {
-      setMessage(`Added product: ${name}`);
-    } else {
-      setMessage('Error adding product');
-    }
-    setSku('');
-    setName('');
-    setPrice('');
-    setVendorId('');
-    fetchProducts();
-  };
 
   const currencyFormatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -104,32 +89,14 @@ export default function Products() {
     {
       field: 'actions',
       type: 'actions',
-      getActions: (params) => {
-        const inEdit = rowModesModel[params.id]?.mode === GridRowModes.Edit;
-        return inEdit
-          ? [
-              <GridActionsCellItem
-                key="save"
-                icon={<SaveIcon />}
-                label="Save"
-                onClick={handleSaveClick(params.id)}
-              />,
-            ]
-          : [
-              <GridActionsCellItem
-                key="edit"
-                icon={<EditIcon />}
-                label="Edit"
-                onClick={handleEditClick(params.id)}
-              />,
-              <GridActionsCellItem
-                key="delete"
-                icon={<DeleteIcon />}
-                label="Delete"
-                onClick={handleDeleteClick(params.id)}
-              />,
-            ];
-      },
+      getActions: (params) => [
+        <GridActionsCellItem
+          key="delete"
+          icon={<DeleteIcon />}
+          label="Delete"
+          onClick={handleDeleteClick(params.id)}
+        />,
+      ],
     },
   ];
 
@@ -137,31 +104,36 @@ export default function Products() {
     <main>
       <h1>Products</h1>
       {message && <p className="message">{message}</p>}
-      <form onSubmit={submit} className="form">
-        <input value={sku} onChange={e => setSku(e.target.value)} placeholder="SKU" required />
-        <input value={name} onChange={e => setName(e.target.value)} placeholder="Name" required />
-        <input value={price} onChange={e => setPrice(e.target.value)} placeholder="Price" />
-        <select value={vendorId} onChange={e => setVendorId(e.target.value)}>
-          <option value="">Select Vendor</option>
-          {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-        </select>
-        <button type="submit">Add</button>
-      </form>
+      <button onClick={() => { setForm(emptyProduct); setOpen(true); }}>New Product</button>
       <div style={{ width: '100%' }}>
         <DataGrid
           autoHeight
           rows={products}
           columns={columns}
           getRowId={(row) => row.id}
-          editMode="row"
-          processRowUpdate={processRowUpdate}
-          onRowEditStart={handleRowEditStart}
-          onRowEditStop={handleRowEditStop}
-          rowModesModel={rowModesModel}
-          onRowModesModelChange={setRowModesModel}
+          onRowClick={handleRowClick}
           disableRowSelectionOnClick
         />
       </div>
+
+      {open && (
+        <Dialog open={open} onClose={closeDialog} fullWidth>
+          <DialogTitle>Edit Product</DialogTitle>
+          <DialogContent style={{display:'flex',flexDirection:'column',gap:'0.5rem'}}>
+            <input value={form.sku || ''} onChange={e => setForm({...form, sku: e.target.value})} placeholder="SKU" />
+            <input value={form.name || ''} onChange={e => setForm({...form, name: e.target.value})} placeholder="Name" />
+            <input value={form.price || ''} onChange={e => setForm({...form, price: e.target.value})} placeholder="Price" />
+            <select value={form.vendor_id || ''} onChange={e => setForm({...form, vendor_id: e.target.value})}>
+              <option value="">Select Vendor</option>
+              {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+            </select>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeDialog}>Cancel</Button>
+            <Button onClick={saveDialog}>Save</Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </main>
   );
 }
