@@ -22,6 +22,41 @@ class Vendor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
     contact_info = db.Column(db.String(256))
+    first_name = db.Column(db.String(64))
+    last_name = db.Column(db.String(64))
+    primary_email = db.Column(db.String(128))
+    secondary_email = db.Column(db.String(128))
+    primary_phone = db.Column(db.String(32))
+    secondary_phone = db.Column(db.String(32))
+    description = db.Column(db.Text)
+    address1 = db.Column(db.String(128))
+    address2 = db.Column(db.String(128))
+    city = db.Column(db.String(64))
+    state = db.Column(db.String(32))
+    zip_code = db.Column(db.String(10))
+    tax_id = db.Column(db.String(64))
+    products = db.relationship('Product', back_populates='vendor')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'contact_info': self.contact_info,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'primary_email': self.primary_email,
+            'secondary_email': self.secondary_email,
+            'primary_phone': self.primary_phone,
+            'secondary_phone': self.secondary_phone,
+            'description': self.description,
+            'address1': self.address1,
+            'address2': self.address2,
+            'city': self.city,
+            'state': self.state,
+            'zip_code': self.zip_code,
+            'tax_id': self.tax_id,
+            'products': [p.name for p in self.products]
+        }
 
 class Product(db.Model):
     __tablename__ = 'products'
@@ -30,7 +65,7 @@ class Product(db.Model):
     name = db.Column(db.String(128), nullable=False)
     price = db.Column(db.Numeric(10,2))
     vendor_id = db.Column(db.Integer, db.ForeignKey('vendors.id'))
-    vendor = db.relationship('Vendor')
+    vendor = db.relationship('Vendor', back_populates='products')
 
     def to_dict(self):
         return {
