@@ -51,3 +51,33 @@ button:hover {
   margin-bottom: 0.5rem;
   color: green;
 }
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.left-col, .right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section {
+  background: #fff;
+  padding: 0.75rem;
+  border-radius: 4px;
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.card {
+  background: #eaeaea;
+  padding: 0.5rem;
+  border-radius: 4px;
+}

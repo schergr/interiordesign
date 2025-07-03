@@ -30,6 +30,39 @@ db.init_app(app)
 bcrypt = Bcrypt(app)
 auth = HTTPBasicAuth()
 
+# Map URL path segments to SQLAlchemy models for import/export
+MODEL_MAP = {
+    'vendors': Vendor,
+    'products': Product,
+    'projects': Project,
+    'productprojects': ProductProject,
+    'inventory': Inventory,
+    'clients': Client,
+    'employees': Employee,
+    'leadstages': LeadStage,
+    'leads': Lead,
+    'contractstatuses': ContractStatus,
+    'contracts': Contract,
+    'tasks': Task,
+    'rooms': Room,
+    'items': Item,
+    'proposals': Proposal,
+    'invoices': Invoice,
+    'notes': Note,
+}
+
+def serialize_record(obj):
+    """Convert a SQLAlchemy model instance to a JSON-serialisable dict."""
+    result = {}
+    for col in obj.__table__.columns:
+        val = getattr(obj, col.name)
+        if hasattr(val, 'isoformat'):
+            val = val.isoformat()
+        elif type(val).__name__ == 'Decimal':
+            val = str(val)
+        result[col.name] = val
+    return result
+
 
 def get_tasks_service():
     creds_file = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE')
@@ -85,6 +118,51 @@ def register():
     db.session.add(user)
     db.session.commit()
     return jsonify({'message': f'User {username} created'}), 201
+
+
+@app.route('/export/<model_name>', methods=['GET'])
+def export_data(model_name):
+    """Export all records of the given model as JSON."""
+    model = MODEL_MAP.get(model_name)
+    if not model:
+        return jsonify({'error': 'Unknown model'}), 404
+    records = model.query.all()
+    return jsonify([serialize_record(r) for r in records])
+
+
+@app.route('/import/<model_name>', methods=['POST'])
+def import_data(model_name):
+    """Import records for the given model from a JSON payload."""
+    model = MODEL_MAP.get(model_name)
+    if not model:
+        return jsonify({'error': 'Unknown model'}), 404
+    data = request.get_json() or []
+    if not isinstance(data, list):
+        return jsonify({'error': 'Invalid payload'}), 400
+    count = 0
+    for item in data:
+        obj = model()
+        for col in model.__table__.columns:
+            if col.name in item:
+                setattr(obj, col.name, item[col.name])
+        db.session.add(obj)
+        count += 1
+    db.session.commit()
+    return jsonify({'imported': count}), 201
+
+
+@app.route('/recent', methods=['GET'])
+def recent_items():
+    """Return a list of recently added items across all models."""
+    items = []
+    for name, model in MODEL_MAP.items():
+        results = model.query.order_by(model.id.desc()).limit(5).all()
+        for obj in results:
+            record = serialize_record(obj)
+            record['_type'] = name
+            items.append(record)
+    items.sort(key=lambda x: x.get('id', 0), reverse=True)
+    return jsonify(items[:10])
 
 @app.route('/vendors', methods=['POST'])
 def create_vendor():

@@ -200,3 +200,27 @@ def test_additional_models():
         note_id = rv.get_json()['id']
         rv = client.get(f'/notes/{note_id}')
         assert rv.get_json()['text'] == 'Note1'
+
+
+def test_export_and_import():
+    with app.app_context():
+        client = app.test_client()
+
+        # create a vendor
+        rv = client.post('/vendors', json={'name': 'ExportInc'})
+        assert rv.status_code == 201
+
+        # export vendors
+        rv = client.get('/export/vendors')
+        data = rv.get_json()
+        assert isinstance(data, list) and len(data) == 1
+        vendor_id = data[0]['id']
+
+        # delete vendor and ensure empty list
+        client.delete(f'/vendors/{vendor_id}')
+        assert client.get('/vendors').get_json() == []
+
+        # import back
+        rv = client.post('/import/vendors', json=data)
+        assert rv.status_code == 201
+        assert len(client.get('/vendors').get_json()) == 1
